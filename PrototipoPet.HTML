@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PetCare Manager - Gestão de Agendamentos e Cadastros</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #0d9488;
+            --primary-dark: #0f766e;
+            --primary-light: #ccfbf1;
+            --primary-bg: #f0fdfa;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --vet-accent: #6366f1;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--background); color: var(--text-main); height: 100vh; overflow: hidden; }
+
+        .screen { display: none; height: 100vh; width: 100%; }
+        .screen.active { display: flex; }
+
+        /* Sidebar */
+        .sidebar { width: 260px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 16px; flex-shrink: 0; }
+        .nav-item { display: flex; align-items: center; padding: 12px; border-radius: 8px; color: var(--text-muted); text-decoration: none; margin-bottom: 4px; transition: all 0.2s; cursor: pointer; font-size: 0.9rem; }
+        .nav-item:hover { background: var(--primary-bg); color: var(--primary); }
+        .nav-item.active { background: var(--primary-bg); color: var(--primary); font-weight: 600; }
+        .nav-item i { margin-right: 12px; font-size: 1.1rem; width: 20px; text-align: center; }
+
+        /* Layout */
+        .main-content { flex: 1; overflow-y: auto; padding: 32px; position: relative; }
+        .card { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .section-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; }
+        
+        /* Forms */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .input-group { margin-bottom: 16px; }
+        label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 6px; color: var(--text-main); }
+        input, select, textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; font-family: inherit; }
+        input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-light); border-color: var(--primary); }
+        
+        .btn { padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; transition: 0.2s; font-size: 0.9rem; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+        .btn-danger { background: #fee2e2; color: var(--danger); }
+        .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+
+        /* Table */
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px; border-bottom: 2px solid var(--border); color: var(--text-muted); font-size: 0.85rem; }
+        td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center; }
+        .popup { background: white; padding: 24px; border-radius: 12px; width: 550px; text-align: left; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+
+        .hint-pulse { border: 2px solid var(--primary) !important; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(13, 148, 136, 0); } 100% { box-shadow: 0 0 0 0 rgba(13, 148, 136, 0); } }
+        
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+        .badge-info { background: #e0e7ff; color: #3730a3; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-danger { background: #fee2e2; color: #b91c1c; }
+        .badge-success { background: #dcfce7; color: #166534; }
+
+        /* Novos Estilos Adicionados para o Histórico e Timeline */
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .tab { padding: 8px 16px; cursor: pointer; border-radius: 6px; font-size: 0.9rem; font-weight: 500; color: var(--text-muted); transition: 0.2s; display: flex; align-items: center; gap: 8px; }
+        .tab:hover { background: var(--background); color: var(--text-main); }
+        .tab.active { background: var(--primary-light); color: var(--primary-dark); font-weight: 600; }
+        
+        .timeline { border-left: 2px solid var(--border); padding-left: 24px; margin-top: 15px; margin-left: 10px; position: relative; }
+        .timeline-item { margin-bottom: 24px; position: relative; }
+        .timeline-item::before { content: ''; position: absolute; left: -31px; top: 0; width: 14px; height: 14px; border-radius: 50%; background: var(--primary); border: 3px solid white; box-shadow: 0 0 0 1px var(--primary); }
+        .timeline-date { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+        .timeline-content { background: var(--background); padding: 16px; border-radius: 8px; border: 1px solid var(--border); }
+        .timeline-content p { font-size: 0.9rem; line-height: 1.5; color: var(--text-main); }
+        .timeline-content .vet-info { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
+    </style>
+</head>
+<body>
+
+    <!-- TELA DE LOGIN (Substituída com a versão do Código 1) -->
+    <div id="screen-login" class="screen active">
+        <div style="display: flex; width: 100%; align-items: center; justify-content: center; background: #0f172a;">
+            <div style="background: white; padding: 40px; border-radius: 16px; width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.25);">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 50px; height: 50px; background: var(--primary-bg); color: var(--primary); border-radius: 50%; font-size: 1.5rem; margin-bottom: 12px;">
+                        <i class="fa-solid fa-paw"></i>
+                    </span>
+                    <h2 style="color: var(--primary);">PetCare Access</h2>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Insira os seus dados de acesso</p>
+                </div>
+
+                <!-- Painel de Auto-preenchimento Rápido para Apresentação -->
+                <div style="background: var(--background); padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+                    <p style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; text-align: center;">Clique para auto-preencher por perfil:</p>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+                        <button class="btn btn-outline btn-sm hint-pulse" style="padding: 6px 4px; font-size: 0.7rem;" onclick="quickFillLogin('recepcionista')">Recepção</button>
+                        <button class="btn btn-outline btn-sm" style="padding: 6px 4px; font-size: 0.7rem;" onclick="quickFillLogin('veterinario')">Veterinário</button>
+                        <button class="btn btn-outline btn-sm" style="padding: 6px 4px; font-size: 0.7rem;" onclick="quickFillLogin('gerente')">Gerente</button>
+                    </div>
+                </div>
+
+                <!-- Formulário com Inputs -->
+                <div style="margin-bottom: 16px;">
+                    <div class="input-group">
+                        <label for="login-username">Nome de Usuário</label>
+                        <input type="text" id="login-username" placeholder="Digite seu usuário..." style="padding-left: 12px;">
+                    </div>
+                    <div class="input-group" style="margin-bottom: 8px;">
+                        <label for="login-password">Senha</label>
+                        <input type="password" id="login-password" placeholder="Digite sua senha..." style="padding-left: 12px;">
+                    </div>
+                    <div id="login-error-msg" style="display: none; color: var(--danger); font-size: 0.8rem; margin-bottom: 12px; text-align: center;">
+                        <i class="fa-solid fa-circle-exclamation"></i> Usuário ou senha incorretos!
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" style="width: 100%; height: 44px; font-size: 0.95rem;" onclick="handleLoginSubmit()">
+                    <i class="fa-solid fa-right-to-bracket"></i> Entrar no Sistema
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ESTRUTURA PRINCIPAL -->
+    <div id="screen-app" class="screen">
+        <div class="sidebar">
+            <div style="font-weight: 700; color: var(--primary); font-size: 1.4rem; margin-bottom: 32px; display: flex; align-items: center;">
+                <i class="fa-solid fa-paw" style="margin-right: 10px;"></i> PetCare
+            </div>
+            <div id="sidebar-role" style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">PERFIL</div>
+            
+            <div class="nav-item active" onclick="showView('dashboard')"><i class="fa-solid fa-home"></i> Painel Inicial</div>
+            
+            <div id="menu-base">
+                <div class="nav-item" onclick="showView('agenda')"><i class="fa-solid fa-calendar"></i> Agenda</div>
+                <div class="nav-item" onclick="showView('tutores')"><i class="fa-solid fa-users"></i> Tutores & Pets</div>
+                <!-- Nova opção no menu base adicionada, restrita à recepcionista -->
+                <div id="menu-cadastro-pet" class="nav-item" onclick="showView('cadastro-pet')"><i class="fa-solid fa-plus-square"></i> Cadastro de Pet</div>
+                <div class="nav-item" onclick="showView('atendimento-simples')"><i class="fa-solid fa-file-medical"></i> Registo de Entrada</div>
+            </div>
+
+            <div id="menu-vet" style="display: none;">
+                <div class="nav-item" onclick="showView('historico-busca')"><i class="fa-solid fa-book-medical"></i> Prontuário Digital</div>
+            </div>
+            
+            <div id="menu-gerente" style="display: none;">
+                <div class="nav-item" onclick="showView('estoque')"><i class="fa-solid fa-boxes-stacked"></i> Stock</div>
+            </div>
+
+            <div style="margin-top: auto;" class="nav-item hint-pulse" onclick="logoutToProfiles()">
+                <i class="fa-solid fa-right-from-bracket" style="color: var(--danger);"></i> 
+                <span style="color: var(--danger); font-weight: 600;">Sair da Conta</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            
+            <!-- VIEW: DASHBOARD -->
+            <div id="view-dashboard" class="content-view">
+                <div class="section-title">
+                    <span>Bem-vindo(a) ao PetCare</span>
+                    <span class="badge badge-info" id="role-badge">RECEPÇÃO</span>
+                </div>
+                <div id="stats-area" class="form-grid"></div>
+                
+                <div class="card" style="margin-top: 24px;">
+                    <h3>Próximos da Hora</h3>
+                    <table style="margin-top: 15px;">
+                        <tr><td>15:00</td><td><strong>Max</strong> (Golden)</td><td>Vacinação</td><td><span class="badge badge-warning">A caminho</span></td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW: TUTORES & PETS -->
+            <div id="view-tutores" class="content-view" style="display: none;">
+                <div class="section-title">
+                    Gestão de Tutores e Animais
+                    <button class="btn btn-primary hint-pulse" onclick="openCadastroModal()"><i class="fa-solid fa-plus"></i> Cadastro Rápido (Modal)</button>
+                </div>
+                
+                <div class="card">
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <input type="text" id="search-tutor" placeholder="Buscar por Nome, CPF ou Telefone..." style="flex: 1;">
+                        <button class="btn btn-outline" onclick="filterTutores()"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
+                    </div>
+
+                    <table id="table-tutores">
+                        <thead>
+                            <tr><th>Tutor / CPF</th><th>Pet(s) Vinculado(s)</th><th>Contacto</th><th>Ações</th></tr>
+                        </thead>
+                        <tbody id="tutores-list">
+                            <tr id="row-ana">
+                                <td><strong>Ana Oliveira</strong><br><small>123.456.789-00</small></td>
+                                <td><span class="badge badge-info">Thor (Cão)</span></td>
+                                <td>(11) 98877-6655</td>
+                                <td>
+                                    <button class="btn btn-outline btn-sm" onclick="editTutor('Ana Oliveira', '123.456.789-00', '(11) 98877-6655')"><i class="fa-solid fa-pen"></i> Editar</button>
+                                    <button class="btn btn-outline btn-sm" onclick="showPetHistory('Thor')"><i class="fa-solid fa-history"></i> Histórico</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- NOVA VIEW ADICIONADA: CADASTRO DE PET -->
+            <div id="view-cadastro-pet" class="content-view" style="display: none;">
+                <div class="section-title">
+                    Cadastro Ficha Completa do Paciente (Pet)
+                </div>
+                <div class="card">
+                    <div style="background: var(--primary-bg); padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 12px; border: 1px solid var(--primary-light);">
+                        <i class="fa-solid fa-circle-info" style="color: var(--primary); font-size: 1.2rem; margin-top: 2px;"></i>
+                        <div>
+                            <strong style="color: var(--primary-dark); font-size: 0.95rem; display: block; margin-bottom: 4px;">Ficha Clínica Especializada</strong>
+                            <span style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.4;">Preencha o dossiê completo do novo paciente. Se o tutor ainda não possuir cadastro, você pode registrá-lo antes ou usar o atalho de Cadastro Rápido.</span>
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin-bottom: 15px; color: var(--text-main); font-size: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><i class="fa-solid fa-user-check" style="margin-right: 8px; color: var(--text-muted);"></i> 1. Vinculação de Tutor</h4>
+                    <div class="input-group">
+                        <label>Buscar Tutor Cadastrado</label>
+                        <select id="select-tutor-tela-pet">
+                            <option value="">Selecione um tutor existente na base...</option>
+                            <option value="ana">Ana Oliveira (CPF: 123.456.789-00)</option>
+                            <option value="carlos">Carlos Souza (CPF: 987.654.321-11)</option>
+                        </select>
+                    </div>
+
+                    <h4 style="margin: 25px 0 15px; color: var(--text-main); font-size: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><i class="fa-solid fa-paw" style="margin-right: 8px; color: var(--text-muted);"></i> 2. Identificação e Biometria do Animal</h4>
+                    <div class="form-grid">
+                        <div class="input-group"><label>Nome do Pet</label><input type="text" placeholder="Ex: Bob, Pipoca, Max..."></div>
+                        <div class="input-group">
+                            <label>Espécie</label>
+                            <select><option>Canina</option><option>Felina</option><option>Ave</option><option>Roedor/Exótico</option></select>
+                        </div>
+                        <div class="input-group"><label>Raça</label><input type="text" placeholder="Ex: Poodle, Siamês..."></div>
+                        <div class="input-group"><label>Cor / Pelagem</label><input type="text" placeholder="Ex: Branco, Malhado, Curto..."></div>
+                        <div class="input-group">
+                            <label>Sexo</label>
+                            <select><option>Macho</option><option>Fêmea</option><option>Indefinido</option></select>
+                        </div>
+                        <div class="input-group"><label>Data de Nascimento (Aprox)</label><input type="date"></div>
+                        <div class="input-group"><label>Peso Atual (Kg)</label><input type="number" step="0.1" placeholder="Ex: 5.5"></div>
+                        <div class="input-group"><label>Microchip / Registro ID</label><input type="text" placeholder="Código numérico se houver"></div>
+                    </div>
+
+                    <h4 style="margin: 25px 0 15px; color: var(--text-main); font-size: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><i class="fa-solid fa-notes-medical" style="margin-right: 8px; color: var(--text-muted);"></i> 3. Informações Médicas Iniciais</h4>
+                    <div class="input-group">
+                        <label>Comorbidades, Alergias ou Observações Relevantes</label>
+                        <textarea rows="3" placeholder="Insira qualquer observação clínica prévia que o tutor tenha informado..."></textarea>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 30px;">
+                        <button class="btn btn-outline" onclick="showView('tutores')">Cancelar</button>
+                        <button class="btn btn-primary hint-pulse" onclick="confirmarAcao('Nova ficha de paciente cadastrada com sucesso no sistema!')"><i class="fa-solid fa-save"></i> Salvar Cadastro do Paciente</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: AGENDA -->
+            <div id="view-agenda" class="content-view" style="display: none;">
+                <div class="section-title">
+                    Agenda Semanal / Consultas do Dia
+                    <button class="btn btn-primary hint-pulse" onclick="openModal('modal-novo-agendamento')"><i class="fa-solid fa-plus"></i> Novo Agendamento</button>
+                </div>
+                <div class="card">
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <input type="text" id="search-agenda" placeholder="Buscar consulta por pet ou tutor..." style="flex: 1;" oninput="filterAgenda()">
+                        <button class="btn btn-outline"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
+                    </div>
+                    
+                    <table>
+                        <thead>
+                            <tr><th>Hora</th><th>Pet</th><th>Tutor</th><th>Serviço</th><th>Status</th><th>Ações</th></tr>
+                        </thead>
+                        <tbody id="agenda-list">
+                            <tr id="row-agenda-1">
+                                <td>14:30</td>
+                                <td><strong>Thor</strong> (Cão)</td>
+                                <td>Ana Oliveira</td>
+                                <td>Banho & Tosa</td>
+                                <td><span class="badge badge-warning" id="status-row-1">Agendado</span></td>
+                                <td>
+                                    <button class="btn btn-outline btn-sm" onclick="openAlterarAgendamento('row-agenda-1', 'Thor', 'Ana Oliveira', '14:30', 'Banho & Tosa')"><i class="fa-solid fa-pen"></i> Alterar</button>
+                                    <button class="btn btn-danger btn-sm" onclick="openCancelarAgendamento('row-agenda-1', 'Thor')"><i class="fa-solid fa-trash"></i> Cancelar</button>
+                                </td>
+                            </tr>
+                            <tr id="row-agenda-2">
+                                <td>16:00</td>
+                                <td><strong>Mimi</strong> (Gato)</td>
+                                <td>Carlos Souza</td>
+                                <td>Consulta Geral</td>
+                                <td><span class="badge badge-warning" id="status-row-2">Agendado</span></td>
+                                <td>
+                                    <button class="btn btn-outline btn-sm" onclick="openAlterarAgendamento('row-agenda-2', 'Mimi', 'Carlos Souza', '16:00', 'Consulta Geral')"><i class="fa-solid fa-pen"></i> Alterar</button>
+                                    <button class="btn btn-danger btn-sm" onclick="openCancelarAgendamento('row-agenda-2', 'Mimi')"><i class="fa-solid fa-trash"></i> Cancelar</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW: REGISTO DE ENTRADA -->
+            <div id="view-atendimento-simples" class="content-view" style="display: none;">
+                <div class="section-title">Registo de Entrada / Atendimento</div>
+                <div class="card">
+                    <div class="input-group">
+                        <label>Localizar Pet</label>
+                        <input type="text" placeholder="Digite o nome do pet..." id="checkin-pet-search">
+                    </div>
+                    <div class="form-grid">
+                        <div class="input-group"><label>Motivo da Visita</label><select><option>Consulta</option><option>Banho/Tosa</option><option>Emergência</option></select></div>
+                        <div class="input-group"><label>Peso (Kg)</label><input type="number" step="0.1"></div>
+                    </div>
+                    <button class="btn btn-primary" onclick="confirmarAcao('Entrada do pet registrada no sistema!')">Confirmar Check-in</button>
+                </div>
+            </div>
+
+            <!-- VIEW: ESTOQUE -->
+            <div id="view-estoque" class="content-view" style="display: none;">
+                <div class="section-title">Controle de Stock Mínimo (Gerente)</div>
+                <div id="alert-estoque-baixo" class="card" style="background: #fff1f2; border: 1px solid var(--danger); color: #9f1239; margin-bottom: 15px; display: none;">
+                    <i class="fa-solid fa-bell-exclamation"></i> <strong>ALERTA DE REPOSIÇÃO:</strong> O Shampoo Antipulgas 5L atingiu o stock mínimo! (Restam apenas 1 un).
+                </div>
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <p style="font-size: 0.9rem; color: var(--text-muted);">Módulo de simulação de alteração de stock.</p>
+                        <button class="btn btn-outline btn-sm hint-pulse" onclick="simularBaixoEstoque()">Simular Stock Baixo</button>
+                    </div>
+                    <table>
+                        <thead><tr><th>Produto</th><th>Qtd Atual</th><th>Mínimo</th><th>Status</th></tr></thead>
+                        <tbody>
+                            <tr><td>Ração Seca 15kg</td><td>12</td><td>5</td><td><span class="badge badge-success">Saudável</span></td></tr>
+                            <tr><td>Shampoo Antipulgas 5L</td><td id="estoque-shampoo-qtd">15</td><td>3</td><td><span class="badge badge-success" id="estoque-shampoo-status">Saudável</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW: HISTÓRICO / PRONTUÁRIO DIGITAL (ATUALIZADO) -->
+            <div id="view-historico-busca" class="content-view" style="display: none;">
+                <div class="section-title">Prontuário e Histórico Médico</div>
+                <div class="card">
+                    <div class="input-group">
+                        <label>Pesquisar Pet no Histórico</label>
+                        <input type="text" placeholder="Escreva o nome do pet (Ex: Thor)..." id="busca-prontuario-input" class="hint-pulse">
+                    </div>
+                    
+                    <!-- Prontuário expandido e navegável -->
+                    <div id="prontuario-detalhado" style="display: none; border-top: 1px solid var(--border); padding-top: 20px; margin-top: 20px;">
+                        
+                        <!-- Cabeçalho do Prontuário -->
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px;">
+                            <div>
+                                <h3 id="pront-nome" style="color: var(--primary); font-size: 1.8rem; margin-bottom: 5px; display: flex; align-items: center; gap: 10px;">
+                                    <i class="fa-solid fa-paw"></i> Max
+                                </h3>
+                                <p style="font-size: 0.85rem; color: var(--text-muted);"><strong>Tutor:</strong> <span id="pront-tutor">Ana Oliveira</span> | <strong>ID:</strong> #14492</p>
+                            </div>
+                            <div style="text-align: right;">
+                                <span class="badge badge-info" style="font-size: 0.85rem; padding: 6px 12px; margin-bottom: 5px; display: inline-block;">Canino • Golden Retriever • 4 anos</span><br>
+                                <span style="font-size: 0.8rem; color: var(--text-muted);">Peso Média: <strong>32.5 kg</strong></span>
+                            </div>
+                        </div>
+
+                        <!-- Abas de Navegação -->
+                        <div class="tabs">
+                            <div class="tab active" onclick="switchTab('tab-timeline', this)"><i class="fa-solid fa-clock-rotate-left"></i> Linha do Tempo</div>
+                            <div class="tab" onclick="switchTab('tab-vacinas', this)"><i class="fa-solid fa-syringe"></i> Carteira de Vacinação</div>
+                            <div class="tab" onclick="switchTab('tab-exames', this)"><i class="fa-solid fa-file-waveform"></i> Exames & Laudos</div>
+                        </div>
+
+                        <!-- Conteúdo: Linha do Tempo -->
+                        <div id="tab-timeline" class="tab-content">
+                            <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+                                <button class="btn btn-primary btn-sm"><i class="fa-solid fa-plus"></i> Novo Registro Clínico</button>
+                            </div>
+                            <div class="timeline">
+                                <div class="timeline-item">
+                                    <div class="timeline-date"><i class="fa-solid fa-calendar-check"></i> 10 de Maio de 2026 - 14:30</div>
+                                    <div class="timeline-content">
+                                        <div class="vet-info">Avaliador: Dra. Beatriz Costa (CRMV 12345) • Motivo: Consulta de Rotina</div>
+                                        <p>"Animal compareceu para avaliação de rotina e atualização vacinal. Apresenta escore corporal ideal (32kg). Sem queixas relatadas pelo tutor. Mucosas normocoradas, ausculta cardíaca e pulmonar sem alterações. Realizada aplicação de V10 e Antirrábica. Prescrito vermífugo para administração domiciliar."</p>
+                                    </div>
+                                </div>
+                                <div class="timeline-item">
+                                    <div class="timeline-date"><i class="fa-solid fa-calendar-check"></i> 15 de Fevereiro de 2026 - 09:15</div>
+                                    <div class="timeline-content">
+                                        <div class="vet-info">Avaliador: Dr. Roberto Silva (CRMV 54321) • Motivo: Dermatologia</div>
+                                        <p>"Tutor relata que o animal apresenta prurido (coceira) intensa na região lombar há 3 dias. Ao exame clínico, notou-se descamação e eritema local. Suspeita de DAPE (Dermatite Alérgica à Picada de Ectoparasita). Prescrito shampoo antialérgico, medicação oral corticóide por 7 dias e pipeta antipulgas."</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Conteúdo: Vacinas -->
+                        <div id="tab-vacinas" class="tab-content" style="display: none;">
+                            <table style="background: white; border-radius: 8px; overflow: hidden; margin-bottom: 10px;">
+                                <thead style="background: var(--background);">
+                                    <tr><th>Vacina</th><th>Lote</th><th>Data Aplicada</th><th>Próxima Dose</th><th>Status</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>V10 (Múltipla Canina)</strong></td>
+                                        <td><small>LT-9988</small></td>
+                                        <td>10/05/2026</td>
+                                        <td>10/05/2027</td>
+                                        <td><span class="badge badge-success">Em Dia</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Antirrábica</strong></td>
+                                        <td><small>LT-7712</small></td>
+                                        <td>10/05/2026</td>
+                                        <td>10/05/2027</td>
+                                        <td><span class="badge badge-success">Em Dia</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Gripe Canina</strong></td>
+                                        <td><small>LT-2234</small></td>
+                                        <td>12/10/2025</td>
+                                        <td><strong>12/10/2026</strong></td>
+                                        <td><span class="badge badge-warning">A Vencer</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <p style="font-size: 0.8rem; color: var(--text-muted);"><i class="fa-solid fa-circle-info"></i> Lembrete automático de vacina programado para disparar 15 dias antes do vencimento via WhatsApp do tutor.</p>
+                        </div>
+                        
+                        <!-- Conteúdo: Exames -->
+                        <div id="tab-exames" class="tab-content" style="display: none;">
+                            <div class="card" style="box-shadow: none; border: 1px solid var(--border); padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <div style="background: #fee2e2; color: var(--danger); width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                                        <i class="fa-solid fa-file-pdf"></i>
+                                    </div>
+                                    <div>
+                                        <strong style="display: block; font-size: 0.95rem; color: var(--text-main);">Hemograma Completo</strong>
+                                        <span style="font-size: 0.8rem; color: var(--text-muted);">Realizado em 15/02/2026 • LabVet Central</span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-outline btn-sm"><i class="fa-solid fa-download"></i> Baixar PDF</button>
+                            </div>
+                            
+                            <div class="card" style="box-shadow: none; border: 1px solid var(--border); padding: 15px; display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <div style="background: #e0e7ff; color: #3730a3; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                                        <i class="fa-solid fa-image"></i>
+                                    </div>
+                                    <div>
+                                        <strong style="display: block; font-size: 0.95rem; color: var(--text-main);">Raio-X de Tórax</strong>
+                                        <span style="font-size: 0.8rem; color: var(--text-muted);">Realizado em 10/05/2024 • Clínica Interna</span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-outline btn-sm"><i class="fa-solid fa-eye"></i> Visualizar Imagem</button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MODAL: CADASTRO COMPLETO (TUTOR + PET) -->
+    <div id="modal-cadastro-completo" class="modal-overlay">
+        <div class="popup">
+            <h3 style="margin-bottom: 20px; border-bottom: 2px solid var(--primary-light); padding-bottom: 10px;">Novo Cadastro Rápido</h3>
+            
+            <div style="background: var(--background); padding: 10px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 8px; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">Demonstração rápida:</span>
+                <div style="display: flex; gap: 6px;">
+                    <button class="btn btn-outline btn-sm" style="padding: 4px 8px; font-size: 0.75rem;" onclick="preencherDadosFicticios(false)">Simular Novo</button>
+                    <button class="btn btn-danger btn-sm" style="padding: 4px 8px; font-size: 0.75rem; background: #fee2e2; color: #b91c1c;" onclick="preencherDadosFicticios(true)">Simular Duplicado</button>
+                </div>
+            </div>
+
+            <!-- Alerta Visual de Duplicado -->
+            <div id="alert-duplicate" style="display: none; background: #fffbeb; border: 1px solid #fef3c7; color: #b45309; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.8rem; line-height: 1.4;">
+                <i class="fa-solid fa-triangle-exclamation"></i> <strong>Aviso de Duplicidade:</strong> Um tutor com o CPF <span id="alert-duplicate-cpf"></span> já existe no sistema (Ana Oliveira). Deseja associar este novo pet ao tutor existente ou manter um registo separado?
+            </div>
+            
+            <p style="font-weight: 700; color: var(--primary); font-size: 0.8rem; margin-bottom: 10px; text-transform: uppercase;">1. Dados do Tutor</p>
+            <div class="form-grid">
+                <div class="input-group"><label>Nome Completo</label><input type="text" id="new-tutor-name" placeholder="Ex: Lucas Souza"></div>
+                <div class="input-group"><label>CPF</label><input type="text" id="new-tutor-cpf" placeholder="000.000.000-00" oninput="checkCpfDuplication(this.value)"></div>
+                <div class="input-group"><label>Telefone</label><input type="text" id="new-tutor-phone" placeholder="(11) 90000-0000"></div>
+                <div class="input-group"><label>E-mail</label><input type="email" id="new-tutor-email" placeholder="exemplo@petcare.com"></div>
+            </div>
+
+            <p style="font-weight: 700; color: var(--primary); font-size: 0.8rem; margin: 15px 0 10px; text-transform: uppercase;">2. Dados do Animal (Vínculo Automático)</p>
+            <div class="form-grid">
+                <div class="input-group"><label>Nome do Pet</label><input type="text" id="new-pet-name" placeholder="Ex: Bob"></div>
+                <div class="input-group">
+                    <label>Espécie</label>
+                    <select id="new-pet-species"><option>Cão</option><option>Gato</option><option>Outros</option></select>
+                </div>
+                <div class="input-group"><label>Raça</label><input type="text" id="new-pet-breed" placeholder="Ex: Beagle"></div>
+                <div class="input-group"><label>Idade (Aprox)</label><input type="number" id="new-pet-age" placeholder="Ex: 3"></div>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn btn-outline" onclick="closeModal('modal-cadastro-completo')">Cancelar</button>
+                <button class="btn btn-primary hint-pulse" onclick="salvarNovoCadastro()">Finalizar Cadastro</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: EDITAR TUTOR -->
+    <div id="modal-editar-tutor" class="modal-overlay">
+        <div class="popup">
+            <h3>Editar Dados do Tutor</h3>
+            <div style="margin-top: 20px;">
+                <div class="input-group"><label>Nome</label><input type="text" id="edit-name"></div>
+                <div class="input-group"><label>CPF</label><input type="text" id="edit-cpf"></div>
+                <div class="input-group"><label>Telefone</label><input type="text" id="edit-tel"></div>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn btn-outline" onclick="closeModal('modal-editar-tutor')">Descartar</button>
+                <button class="btn btn-primary" onclick="confirmarAcao('Dados atualizados com sucesso!')">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: NOVO AGENDAMENTO -->
+    <div id="modal-novo-agendamento" class="modal-overlay">
+        <div class="popup">
+            <h3 style="margin-bottom: 20px; border-bottom: 2px solid var(--primary-light); padding-bottom: 10px;">Novo Agendamento</h3>
+            
+            <div style="background: var(--background); padding: 10px; border-radius: 8px; margin-bottom: 15px; display: flex; gap: 8px; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted);">Demonstração de Conflito:</span>
+                <button class="btn btn-danger btn-sm" style="padding: 4px 8px; font-size: 0.75rem; background: #fee2e2; color: #b91c1c;" onclick="simularConflitoHorario()">Preencher Conflito</button>
+            </div>
+
+            <!-- Alerta de Conflito de Horário -->
+            <div id="alert-conflito-agenda" style="display: none; background: #fff1f2; border: 1px solid #fecaca; color: #9f1239; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.8rem; line-height: 1.4;">
+                <i class="fa-solid fa-triangle-exclamation"></i> <strong>Conflito de Horário detetado!</strong> O horário de <span id="alert-conflito-hora">14:30</span> já está reservado para outro atendimento no mesmo setor. Selecione outra hora para continuar.
+            </div>
+
+            <div class="input-group">
+                <label>Selecionar Pet Vinculado</label>
+                <select id="ag-pet-select">
+                    <option value="Thor">Thor (Ana Oliveira)</option>
+                    <option value="Mimi">Mimi (Carlos Souza)</option>
+                </select>
+            </div>
+            <div class="form-grid">
+                <div class="input-group">
+                    <label>Data</label>
+                    <input type="date" id="ag-data" value="2026-05-16">
+                </div>
+                <div class="input-group">
+                    <label>Horário</label>
+                    <input type="time" id="ag-hora" value="10:00" oninput="checkSchedulingConflict(this.value)">
+                </div>
+            </div>
+            <div class="input-group">
+                <label>Serviço Pretendido</label>
+                <select id="ag-servico">
+                    <option value="Consulta Geral">Consulta Geral</option>
+                    <option value="Banho & Tosa">Banho & Tosa</option>
+                    <option value="Vacinação">Vacinação</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn btn-outline" onclick="closeModal('modal-novo-agendamento')">Cancelar</button>
+                <button class="btn btn-primary hint-pulse" id="btn-salvar-agendamento" onclick="salvarNovoAgendamento()">Confirmar Agendamento</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ALTERAR AGENDAMENTO -->
+    <div id="modal-alterar-agenda" class="modal-overlay">
+        <div class="popup">
+            <h3>Alterar Agendamento: <span id="alt-pet-span"></span></h3>
+            <input type="hidden" id="alt-row-id">
+            
+            <div class="form-grid" style="margin-top: 20px;">
+                <div class="input-group">
+                    <label>Nova Data</label>
+                    <input type="date" id="alt-data" value="2026-05-16">
+                </div>
+                <div class="input-group">
+                    <label>Novo Horário</label>
+                    <input type="time" id="alt-hora" value="14:30" oninput="checkRescheduleConflict(this.value)">
+                </div>
+            </div>
+            
+            <!-- Alerta Conflito ao Alterar -->
+            <div id="alert-conflito-alterar" style="display: none; background: #fff1f2; border: 1px solid #fecaca; color: #9f1239; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.8rem; line-height: 1.4;">
+                <i class="fa-solid fa-triangle-exclamation"></i> <strong>Aviso de Indisponibilidade:</strong> O horário escolhido está ocupado. Escolha outro horário para evitar conflitos de agenda.
+            </div>
+
+            <div class="input-group">
+                <label>Serviço</label>
+                <select id="alt-servico">
+                    <option value="Consulta Geral">Consulta Geral</option>
+                    <option value="Banho & Tosa">Banho & Tosa</option>
+                    <option value="Vacinação">Vacinação</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button class="btn btn-outline" onclick="closeModal('modal-alterar-agenda')">Voltar</button>
+                <button class="btn btn-primary" id="btn-confirmar-alterar" onclick="salvarAlteracaoAgendamento()">Confirmar Alteração</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CONFIRMAR CANCELAMENTO -->
+    <div id="modal-cancelar-agenda" class="modal-overlay">
+        <div class="popup" style="text-align: center; width: 450px;">
+            <i class="fa-solid fa-circle-exclamation" style="font-size: 3rem; color: var(--danger); margin-bottom: 15px;"></i>
+            <h3>Deseja cancelar o agendamento do <span id="canc-pet-span"></span>?</h3>
+            <p style="margin: 10px 0 20px; color: var(--text-muted); font-size: 0.9rem;">Esta ação irá libertar a vaga na agenda diária.</p>
+            <input type="hidden" id="canc-row-id">
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button class="btn btn-outline" onclick="closeModal('modal-cancelar-agenda')">Não, manter</button>
+                <button class="btn btn-danger hint-pulse" onclick="confirmarCancelamentoAgendamento()">Sim, Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: SUCESSO -->
+    <div id="modal-sucesso" class="modal-overlay">
+        <div class="popup" style="text-align: center; width: 400px;">
+            <i class="fa-solid fa-circle-check" style="font-size: 3rem; color: var(--success); margin-bottom: 15px;"></i>
+            <h3 id="success-msg">Operação Concluída</h3>
+            <button class="btn btn-primary" style="margin-top: 20px; width: 100%;" onclick="closeModal('modal-sucesso')">Entendido</button>
+        </div>
+    </div>
+
+    <script>
+        let currentRole = '';
+        let targetRowId = '';
+
+        // Tabela interna de utilizadores autorizados no protótipo (Adicionado do Código 1)
+        const credentialsDb = {
+            'recep': { role: 'recepcionista', password: '123' },
+            'vet': { role: 'veterinario', password: '123' },
+            'gerente': { role: 'gerente', password: '123' }
+        };
+
+        // Função para preencher automaticamente as credenciais para demonstração rápida (Adicionado do Código 1)
+        function quickFillLogin(role) {
+            const userField = document.getElementById('login-username');
+            const passField = document.getElementById('login-password');
+            const errorDiv = document.getElementById('login-error-msg');
+            
+            errorDiv.style.display = 'none';
+
+            if (role === 'recepcionista') {
+                userField.value = 'recep';
+                passField.value = '123';
+            } else if (role === 'veterinario') {
+                userField.value = 'vet';
+                passField.value = '123';
+            } else if (role === 'gerente') {
+                userField.value = 'gerente';
+                passField.value = '123';
+            }
+        }
+
+        // Validação das credenciais inseridas manualmente (Adicionado do Código 1)
+        function handleLoginSubmit() {
+            const userField = document.getElementById('login-username').value.trim();
+            const passField = document.getElementById('login-password').value;
+            const errorDiv = document.getElementById('login-error-msg');
+
+            errorDiv.style.display = 'none';
+
+            // Verifica se as credenciais correspondem à nossa base simulada
+            if (credentialsDb[userField] && credentialsDb[userField].password === passField) {
+                doLogin(credentialsDb[userField].role);
+            } else {
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function doLogin(role) {
+            document.getElementById('screen-login').classList.remove('active');
+            document.getElementById('screen-app').classList.add('active');
+            document.getElementById('sidebar-role').innerText = 'PERFIL: ' + role.toUpperCase();
+            document.getElementById('role-badge').innerText = role.toUpperCase();
+
+            // Visibilidade de menus
+            document.getElementById('menu-base').style.display = (role !== 'veterinario') ? 'block' : 'none';
+            document.getElementById('menu-vet').style.display = (role === 'veterinario') ? 'block' : 'none';
+            document.getElementById('menu-gerente').style.display = (role === 'gerente') ? 'block' : 'none';
+
+            // Garante que "Cadastro de Pet" só aparece para a recepcionista e não para o gerente
+            const menuCadastroPet = document.getElementById('menu-cadastro-pet');
+            if(menuCadastroPet) {
+                menuCadastroPet.style.display = (role === 'recepcionista') ? 'flex' : 'none';
+            }
+
+            // Stats dinâmicos
+            const stats = document.getElementById('stats-area');
+            if(role === 'recepcionista') {
+                stats.innerHTML = `<div class="card"><h3>12</h3><p>Agendados Hoje</p></div><div class="card"><h3>04</h3><p>Pets em Loja</p></div>`;
+                showView('dashboard');
+            } else if(role === 'veterinario') {
+                stats.innerHTML = `<div class="card"><h3>08</h3><p>Consultas na Fila</p></div><div class="card"><h3>04</h3><p>Atendidos Hoje</p></div>`;
+                showView('historico-busca');
+            } else {
+                stats.innerHTML = `<div class="card"><h3>R$ 4.500</h3><p>Vendas da Semana</p></div><div class="card"><h3>02</h3><p>Alertas de Stock</p></div>`;
+                showView('estoque');
+            }
+        }
+
+        function showView(view) {
+            document.querySelectorAll('.content-view').forEach(v => v.style.display = 'none');
+            document.getElementById('view-' + view).style.display = 'block';
+            
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+                if(item.getAttribute('onclick')?.includes(`'${view}'`)) item.classList.add('active');
+            });
+        }
+
+        // Logout modificado para limpar os campos do novo painel de login (Mescla do Código 1 com o 2)
+        function logoutToProfiles() {
+            // Limpa os campos ao voltar ao ecrã inicial
+            document.getElementById('login-username').value = '';
+            document.getElementById('login-password').value = '';
+            document.getElementById('login-error-msg').style.display = 'none';
+
+            document.getElementById('screen-app').classList.remove('active');
+            document.getElementById('screen-login').classList.add('active');
+        }
+
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        
+        function closeModal(id) { 
+            if(id) {
+                document.getElementById(id).style.display = 'none';
+            } else {
+                document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+            }
+        }
+
+        function openCadastroModal() {
+            document.getElementById('alert-duplicate').style.display = 'none';
+            document.getElementById('new-tutor-name').value = '';
+            document.getElementById('new-tutor-cpf').value = '';
+            document.getElementById('new-tutor-phone').value = '';
+            document.getElementById('new-tutor-email').value = '';
+            document.getElementById('new-pet-name').value = '';
+            document.getElementById('new-pet-breed').value = '';
+            document.getElementById('new-pet-age').value = '';
+            openModal('modal-cadastro-completo');
+        }
+
+        function preencherDadosFicticios(isDuplicate) {
+            if (isDuplicate) {
+                document.getElementById('new-tutor-name').value = "Ana Oliveira";
+                document.getElementById('new-tutor-cpf').value = "123.456.789-00";
+                document.getElementById('new-tutor-phone').value = "(11) 98877-6655";
+                document.getElementById('new-tutor-email').value = "ana.oliveira@email.com";
+                
+                document.getElementById('new-pet-name').value = "Bobi";
+                document.getElementById('new-pet-species').value = "Cão";
+                document.getElementById('new-pet-breed').value = "Poodle";
+                document.getElementById('new-pet-age').value = "2";
+                
+                checkCpfDuplication("123.456.789-00");
+            } else {
+                document.getElementById('alert-duplicate').style.display = 'none';
+                document.getElementById('new-tutor-name').value = "Lucas Silva";
+                document.getElementById('new-tutor-cpf').value = "456.789.012-34";
+                document.getElementById('new-tutor-phone').value = "(21) 97766-5544";
+                document.getElementById('new-tutor-email').value = "lucas.silva@email.com";
+                
+                document.getElementById('new-pet-name').value = "Pipoca";
+                document.getElementById('new-pet-species').value = "Gato";
+                document.getElementById('new-pet-breed').value = "Siamês";
+                document.getElementById('new-pet-age').value = "1";
+            }
+        }
+
+        function checkCpfDuplication(cpfValue) {
+            const cleanCpf = cpfValue.trim();
+            const alertBox = document.getElementById('alert-duplicate');
+            const alertCpfSpan = document.getElementById('alert-duplicate-cpf');
+            
+            if (cleanCpf === "123.456.789-00" || cleanCpf === "12345678900") {
+                alertCpfSpan.innerText = "123.456.789-00";
+                alertBox.style.display = 'block';
+            } else {
+                alertBox.style.display = 'none';
+            }
+        }
+
+        function salvarNovoCadastro() {
+            const tutor = document.getElementById('new-tutor-name').value;
+            const cpf = document.getElementById('new-tutor-cpf').value;
+            const phone = document.getElementById('new-tutor-phone').value || "(11) 90000-0000";
+            const pet = document.getElementById('new-pet-name').value;
+            const species = document.getElementById('new-pet-species').value;
+            
+            if(!tutor || !pet) {
+                // Substituição do comando alert() para um modal customizado
+                confirmarAcao("Por favor, preencha os nomes do Tutor e do Pet.");
+                return;
+            }
+
+            if (cpf === "123.456.789-00") {
+                const rowAna = document.getElementById('row-ana');
+                if (rowAna) {
+                    const petCell = rowAna.cells[1];
+                    petCell.innerHTML += ` <span class="badge badge-info" style="margin-left: 4px;">${pet} (${species})</span>`;
+                }
+                confirmarAcao(`O pet ${pet} foi associado com sucesso à tutora existente Ana Oliveira (CPF: ${cpf})!`);
+                return;
+            }
+
+            const list = document.getElementById('tutores-list');
+            const row = list.insertRow(0);
+            row.innerHTML = `
+                <td><strong>${tutor}</strong><br><small>${cpf || '---'}</small></td>
+                <td><span class="badge badge-info">${pet} (${species})</span></td>
+                <td>${phone}</td>
+                <td>
+                    <button class="btn btn-outline btn-sm" onclick="editTutor('${tutor}', '${cpf}', '${phone}')"><i class="fa-solid fa-pen"></i> Editar</button>
+                    <button class="btn btn-outline btn-sm" onclick="showPetHistory('${pet}')"><i class="fa-solid fa-history"></i> Histórico</button>
+                </td>
+            `;
+            
+            confirmarAcao(`Cadastro de ${tutor} e o pet ${pet} realizado com sucesso!`);
+        }
+
+        function editTutor(nome, cpf, tel) {
+            document.getElementById('edit-name').value = nome;
+            document.getElementById('edit-cpf').value = cpf;
+            document.getElementById('edit-tel').value = tel;
+            openModal('modal-editar-tutor');
+        }
+
+        function filterTutores() {
+            const input = document.getElementById('search-tutor').value.toLowerCase();
+            const rows = document.querySelectorAll('#tutores-list tr');
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(input) ? '' : 'none';
+            });
+        }
+
+        /* Gestão de Agendamento */
+        function simularConflitoHorario() {
+            document.getElementById('ag-pet-select').value = "Thor";
+            document.getElementById('ag-data').value = "2026-05-16";
+            document.getElementById('ag-hora').value = "14:30";
+            document.getElementById('ag-servico').value = "Banho & Tosa";
+            checkSchedulingConflict("14:30");
+        }
+
+        function checkSchedulingConflict(timeValue) {
+            const alertBox = document.getElementById('alert-conflito-agenda');
+            const saveBtn = document.getElementById('btn-salvar-agendamento');
+            
+            if (timeValue === "14:30") {
+                document.getElementById('alert-conflito-hora').innerText = "14:30";
+                alertBox.style.display = 'block';
+                saveBtn.style.background = "var(--text-muted)";
+                saveBtn.style.cursor = "not-allowed";
+                saveBtn.setAttribute('disabled', 'true');
+            } else {
+                alertBox.style.display = 'none';
+                saveBtn.style.background = "var(--primary)";
+                saveBtn.style.cursor = "pointer";
+                saveBtn.removeAttribute('disabled');
+            }
+        }
+
+        function salvarNovoAgendamento() {
+            const pet = document.getElementById('ag-pet-select').value;
+            const data = document.getElementById('ag-data').value;
+            const hora = document.getElementById('ag-hora').value;
+            const servico = document.getElementById('ag-servico').value;
+            
+            const table = document.getElementById('agenda-list');
+            const newRowId = 'row-agenda-' + Date.now();
+            
+            const row = table.insertRow(-1);
+            row.id = newRowId;
+            row.innerHTML = `
+                <td>${hora}</td>
+                <td><strong>${pet}</strong></td>
+                <td>Tutor Cadastrado</td>
+                <td>${servico}</td>
+                <td><span class="badge badge-warning" id="status-${newRowId}">Agendado</span></td>
+                <td>
+                    <button class="btn btn-outline btn-sm" onclick="openAlterarAgendamento('${newRowId}', '${pet}', 'Tutor Cadastrado', '${hora}', '${servico}')"><i class="fa-solid fa-pen"></i> Alterar</button>
+                    <button class="btn btn-danger btn-sm" onclick="openCancelarAgendamento('${newRowId}', '${pet}')"><i class="fa-solid fa-trash"></i> Cancelar</button>
+                </td>
+            `;
+            confirmarAcao(`Agendamento de ${pet} marcado com sucesso às ${hora}!`);
+        }
+
+        function openAlterarAgendamento(rowId, petName, tutorName, hora, servico) {
+            document.getElementById('alt-pet-span').innerText = petName;
+            document.getElementById('alt-row-id').value = rowId;
+            document.getElementById('alt-hora').value = hora;
+            document.getElementById('alt-servico').value = servico;
+            document.getElementById('alert-conflito-alterar').style.display = 'none';
+            document.getElementById('btn-confirmar-alterar').removeAttribute('disabled');
+            document.getElementById('btn-confirmar-alterar').style.background = "var(--primary)";
+            openModal('modal-alterar-agenda');
+        }
+
+        function checkRescheduleConflict(timeValue) {
+            const alertBox = document.getElementById('alert-conflito-alterar');
+            const confirmBtn = document.getElementById('btn-confirmar-alterar');
+            
+            if (timeValue === "16:00") {
+                alertBox.style.display = 'block';
+                confirmBtn.style.background = "var(--text-muted)";
+                confirmBtn.style.cursor = "not-allowed";
+                confirmBtn.setAttribute('disabled', 'true');
+            } else {
+                alertBox.style.display = 'none';
+                confirmBtn.style.background = "var(--primary)";
+                confirmBtn.style.cursor = "pointer";
+                confirmBtn.removeAttribute('disabled');
+            }
+        }
+
+        function salvarAlteracaoAgendamento() {
+            const rowId = document.getElementById('alt-row-id').value;
+            const novaHora = document.getElementById('alt-hora').value;
+            const novoServico = document.getElementById('alt-servico').value;
+            
+            const row = document.getElementById(rowId);
+            if (row) {
+                row.cells[0].innerHTML = novaHora;
+                row.cells[3].innerHTML = novoServico;
+                
+                row.style.background = "var(--primary-bg)";
+                setTimeout(() => {
+                    row.style.background = "transparent";
+                }, 1000);
+            }
+            confirmarAcao('Agendamento alterado e atualizado com sucesso!');
+        }
+
+        function openCancelarAgendamento(rowId, petName) {
+            document.getElementById('canc-pet-span').innerText = petName;
+            document.getElementById('canc-row-id').value = rowId;
+            openModal('modal-cancelar-agenda');
+        }
+
+        function confirmarCancellationAgenda() {
+            const rowId = document.getElementById('canc-row-id').value;
+            const row = document.getElementById(rowId);
+            if (row) {
+                const badge = document.getElementById('status-' + rowId.replace('row-agenda-', 'row-'));
+                if (badge) {
+                    badge.innerText = "Cancelado";
+                    badge.className = "badge badge-danger";
+                }
+                row.style.opacity = "0.5";
+                const alterButton = row.querySelector('.btn-outline');
+                const cancelBtn = row.querySelector('.btn-danger');
+                if (alterButton) alterButton.disabled = true;
+                if (cancelBtn) cancelBtn.disabled = true;
+            }
+        }
+
+        function confirmarCancelamentoAgendamento() {
+            confirmarCancellationAgenda();
+            confirmarAcao('O agendamento selecionado foi cancelado com sucesso.');
+        }
+
+        function filterAgenda() {
+            const input = document.getElementById('search-agenda').value.toLowerCase();
+            const rows = document.querySelectorAll('#agenda-list tr');
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(input) ? '' : 'none';
+            });
+        }
+
+        function simularBaixoEstoque() {
+            document.getElementById('estoque-shampoo-qtd').innerText = "1 un";
+            document.getElementById('estoque-shampoo-status').innerText = "Crítico";
+            document.getElementById('estoque-shampoo-status').className = "badge badge-danger";
+            document.getElementById('alert-estoque-baixo').style.display = "block";
+        }
+
+        function confirmarAcao(msg) {
+            closeModal();
+            document.getElementById('success-msg').innerText = msg;
+            openModal('modal-sucesso');
+        }
+
+        function switchTab(tabId, element) {
+            document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tabId).style.display = 'block';
+            if(element) element.classList.add('active');
+        }
+
+        function showPetHistory(pet) {
+            showView('historico-busca');
+            document.getElementById('busca-prontuario-input').value = pet;
+            
+            const prontuarioId = document.getElementById('prontuario-detalhado');
+            document.getElementById('pront-nome').innerHTML = `<i class="fa-solid fa-paw"></i> ${pet}`;
+            document.getElementById('pront-tutor').innerText = pet === "Thor" ? "Ana Oliveira" : "Carlos Souza";
+            
+            const firstTabBtn = document.querySelector('.tabs .tab');
+            switchTab('tab-timeline', firstTabBtn);
+            
+            prontuarioId.style.display = 'block';
+        }
+
+        document.getElementById('busca-prontuario-input')?.addEventListener('click', function() {
+            this.value = "Thor";
+            showPetHistory("Thor");
+        });
+
+    </script>
+</body>
+</html>
